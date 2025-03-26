@@ -1,0 +1,45 @@
+
+
+services:
+  php:
+    build: php/
+    container_name: php-server
+    ports:
+      - "8080:80"
+    networks:
+      - php-mysql-network
+    depends_on:
+      - mysql
+    env_file: 
+      - "php/secrets.env"
+    #environment:
+      #MYSQL_USER: superduper
+      #MYSQL_PASSWORD: changeme
+    #tty: true
+    #stdin_open: true
+    #command: sh
+
+  mysql:
+    image: mysql:5.7
+    container_name: mysql-server
+    env_file: 
+      - "mysql/secrets.env"
+    #environment:
+      #MYSQL_ROOT_PASSWORD: changeme
+      #MYSQL_RANDOM_ROOT_PASSWORD: yes
+      #MYSQL_DATABASE: NewAndShiny
+      #MYSQL_USER: superduper
+      #MYSQL_PASSWORD: changeme
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-volume:/var/lib/mysql
+    networks:
+      - php-mysql-network
+
+networks:
+  php-mysql-network:
+    driver: bridge
+
+volumes:
+    mysql-volume:
