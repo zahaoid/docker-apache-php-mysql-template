@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# Prevent the redirect loop by checking if the request is already for front-controller.php
+RewriteCond %{REQUEST_URI} !^/front-controller.php$
+RewriteRule ^(.*)$ /front-controller.php [L]

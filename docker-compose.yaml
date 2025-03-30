@@ -2,7 +2,7 @@
 
 services:
   webserver:
-    image: php:8.1-apache
+    build: ./webserver/
     container_name: web-server
     ports:
       - "8080:80"
@@ -11,7 +11,7 @@ services:
     depends_on:
       - mysql
     env_file: 
-      - "webserver/secrets.env"
+      - "common/secrets.env"
     volumes:
       - ./webserver/src:/var/www/html/
     #environment:
@@ -19,13 +19,12 @@ services:
       #MYSQL_PASSWORD: changeme
     #tty: true
     #stdin_open: true
-    #command: sh
-
+    command: [sh, -c, "php /var/www/html/database/startup.php && apache2-foreground"]
   mysql:
     image: mysql:5.7
     container_name: mysql-server
     env_file: 
-      - "mysql/secrets.env"
+      - "common/secrets.env"
     #environment:
       #MYSQL_ROOT_PASSWORD: changeme
       #MYSQL_RANDOM_ROOT_PASSWORD: yes
