@@ -1,0 +1,1 @@
+alter table contexts modify column trcontext varchar(128);

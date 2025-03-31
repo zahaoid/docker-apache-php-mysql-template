@@ -1,0 +1,1 @@
+ALTER TABLE corrections DROP PRIMARY KEY;
