@@ -79,7 +79,7 @@ function isVersionControlled($connection, $config)
 // Create the version control table
 function createVersionControlTable($connection, $config)
 {
-    $query = "CREATE TABLE {$config['versioningTableName'] }(version VARCHAR(10) PRIMARY KEY, successful CHAR(1), dateapplied TIMESTAMP NOT NULL, sql_query TEXT NOT NULL);";
+    $query = "CREATE TABLE {$config['versioningTableName'] }(version VARCHAR(10) PRIMARY KEY, dateapplied TIMESTAMP NOT NULL, sql_query TEXT NOT NULL);";
     mysqli_query($connection, $query);
     echo "Version control table created successfully.\n";
 }
@@ -199,14 +199,16 @@ function applyMigration($connection, $config, $file){
     $migrationSql = readSqlFile($config['migrationsFolderPath'] . DIRECTORY_SEPARATOR . $file);
     echo "Applying " . $file . "\n";
     // Apply the migration SQL
-    $result = mysqli_query($connection, $migrationSql)? 'T' : 'F';
-    // Log the migration in the schema_change_log table
-    $dateApplied = date('Y-m-d H:i:s');
-    $logQuery = "INSERT INTO {$config['versioningTableName']} (version, sql_query, dateapplied, successful) VALUES (?, ?, ?, ?)";
-    $stmt = mysqli_prepare($connection, $logQuery);
-    mysqli_stmt_bind_param($stmt, "ssss", $version, $migrationSql, $dateApplied, $result);
-    mysqli_stmt_execute($stmt);
-    echo "Migration version " . $version . " applied successfully\n";
+    if(mysqli_query($connection, $migrationSql)){
+
+        // Log the migration in the schema_change_log table
+        $dateApplied = date('Y-m-d H:i:s');
+        $logQuery = "INSERT INTO {$config['versioningTableName']} (version, sql_query, dateapplied) VALUES (?, ?, ?)";
+        $stmt = mysqli_prepare($connection, $logQuery);
+        mysqli_stmt_bind_param($stmt, "sss", $version, $migrationSql, $dateApplied);
+        mysqli_stmt_execute($stmt);
+        echo "Migration version " . $version . " applied successfully\n";
+    }
 }
 
 // Parse version from the migration file name
