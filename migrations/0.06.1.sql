@@ -1,1 +1,0 @@
-alter table entries add column category varchar(32);

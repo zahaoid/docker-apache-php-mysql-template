@@ -1,1 +1,0 @@
-alter table entries modify column origin varchar(32);

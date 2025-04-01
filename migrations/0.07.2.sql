@@ -1,1 +1,0 @@
-alter table contexts modify column arcontext varchar(128);

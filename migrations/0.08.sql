@@ -1,1 +1,0 @@
-alter table entries add column elaboration varchar(4096) null;
