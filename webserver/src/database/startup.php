@@ -51,18 +51,21 @@ function connect($config){
 function printVersionInfo($connection, $config, $migrationFiles){
     echo "Current database version = " . getDatabaseVersion($connection, $config) . " current webserver version = " . getAppVersion($migrationFiles) . "\n";
 }
+
+function getAppVersion($migrationFiles){
+
+    return $migrationFiles? parseVersion(end($migrationFiles)) : '0';
+}
+
 // Get the current database version
 function getDatabaseVersion($connection, $config)
 {
     if (!isVersionControlled($connection, $config)) return 0;
     $query = "SELECT MAX(version) AS currentversion FROM  {$config['versioningTableName']};";
     $result = mysqli_query($connection, $query);
-
-    if ($result) {
-        $row = $result->fetch_assoc();
-        return (int)$row['currentversion'];
-    }
-    return 0;
+    $row = $result->fetch_assoc();
+    
+    return $row['currentversion']? $row['currentversion']: '0';
 }
 
 // Check if the database is version-controlled
@@ -100,7 +103,7 @@ function nukeDatabase($connection, $config){
 
 // Initialize the database by checking version control and applying migrations if needed
 function initializeDatabase($config){
-
+    $errorFlag = false;
     try{
         $migrationFiles =  loadMigrationFiles($config);
         $connection = connect($config);
@@ -127,7 +130,11 @@ function initializeDatabase($config){
     catch(Exception $e) {  
         echo "A fatal error has occured, attempting to shutdown the web server.. \n";
         echo("Error: " . $e);
-        die(1); //IMPORTANT!!! this exists php with an error code 1 so that apache doesnt run!!!!
+        $errorFlag = true;
+    }
+    finally{
+        closeConnection($connection);
+        if ($errorFlag) die(1); //IMPORTANT!!! this exists php with an error code 1 so that apache doesnt run!!!!
     }
 }
 
@@ -150,13 +157,6 @@ function loadMigrationFiles($config){
 
 }
 
-function getAppVersion($migrationFiles){
-
-    if (empty($migrationFiles)){
-        return "0";
-    }
-    return parseVersion(end($migrationFiles));
-}
 
 
 // Apply migrations based on available migration files
@@ -168,7 +168,7 @@ function migrate($connection, $config, $migrationFiles)
         return version_compare(parseVersion($file) , $databaseVersion) > 0;
     });
 
-    if (!empty($newMigrations)) {
+    if ($newMigrations) {
         echo "new SQL migration scripts found.\n";
         $migrationSuccessful = true;
 
@@ -197,22 +197,15 @@ function readSqlFile($path){
 function applyMigration($connection, $config, $file){
     $version = parseVersion(filename: $file);
     $migrationSql = readSqlFile($config['migrationsFolderPath'] . DIRECTORY_SEPARATOR . $file);
-    echo $migrationSql;
     echo "Applying " . $file . "\n";
     // Apply the migration SQL
-    try{
-        $result = mysqli_query($connection, $migrationSql);
-        echo $result;
-    }
-    catch (Exception $e) {
-        echo $result;
-        echo "wefgegegdgerghe";
-    }
+    $result = mysqli_query($connection, $migrationSql)? 'T' : 'F';
     // Log the migration in the schema_change_log table
     $dateApplied = date('Y-m-d H:i:s');
-    $logQuery = "INSERT INTO {$config['versioningTableName']} (version, sql_query, dateapplied, successfull) VALUES ($version, $migrationSql, $dateApplied, $result? 'T' : 'F')";
-    mysqli_query($connection, $logQuery);
-
+    $logQuery = "INSERT INTO {$config['versioningTableName']} (version, sql_query, dateapplied, successful) VALUES (?, ?, ?, ?)";
+    $stmt = mysqli_prepare($connection, $logQuery);
+    mysqli_stmt_bind_param($stmt, "ssss", $version, $migrationSql, $dateApplied, $result);
+    mysqli_stmt_execute($stmt);
     echo "Migration version " . $version . " applied successfully\n";
 }
 
